@@ -81,6 +81,11 @@ def parse_args(argv=None):
         help="Optional path to write the full review output as a text file. "
              "When omitted, the output is only printed to stdout.",
     )
+    parser.add_argument(
+        "--language",
+        default="English",
+        help="Language in which to generate the review questions and responses.",
+    )
     return parser.parse_args(argv)
 
 
@@ -125,7 +130,7 @@ def run(args) -> str:
     # ------------------------------------------------------------------ #
     print("[3/4] Generating review questions (problems only)…", flush=True)
     generator = ReviewGenerator(primary_llm)
-    review_questions = generator.generate(paper_text, discipline)
+    review_questions = generator.generate(paper_text, discipline, args.language)
 
     # ------------------------------------------------------------------ #
     # 4. Generate author responses to the review questions
@@ -148,6 +153,7 @@ def run(args) -> str:
         review_questions=review_questions,
         paper_text=paper_text,
         discipline=discipline,
+        language=args.language,
     )
 
     # ------------------------------------------------------------------ #
