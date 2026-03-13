@@ -1,0 +1,107 @@
+{
+  "document": {
+    "default_font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 11
+    },
+    "margins_cm": {
+      "top": 2.54,
+      "bottom": 2.54,
+      "left": 2.54,
+      "right": 2.54
+    }
+  },
+  "paragraph": {
+    "line_spacing": 1.15,
+    "space_after_pt": 8,
+    "first_line_indent_chars": 0.0
+  },
+  "title": {
+    "font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 16,
+      "bold": true
+    },
+    "align": "center",
+    "space_after_pt": 10
+  },
+  "section_heading": {
+    "font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 13,
+      "bold": true
+    },
+    "space_before_pt": 10,
+    "space_after_pt": 6
+  },
+  "metadata": {
+    "font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 10
+    }
+  },
+  "review": {
+    "number_font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 11,
+      "bold": true
+    },
+    "label_font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 11,
+      "bold": true
+    },
+    "body_font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 11
+    },
+    "left_indent_cm": 0.5,
+    "reference_color_rgb": "1F4E79",
+    "labels": {
+      "reference_location": "Reference Location: ",
+      "reference_text": "Reference Text: ",
+      "issue": "Issue: ",
+      "detail": "Detail: "
+    }
+  },
+  "response": {
+    "title_font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 11,
+      "bold": true
+    },
+    "label_font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 11,
+      "bold": true
+    },
+    "body_font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 11
+    },
+    "left_indent_cm": 0.5,
+    "labels": {
+      "problem": "Problem Summary: ",
+      "responde": "Response and Resolution: "
+    }
+  },
+  "footer": {
+    "font": {
+      "latin": "Times New Roman",
+      "east_asia": "Times New Roman",
+      "size": 9
+    },
+    "color_rgb": "666666",
+    "space_before_pt": 16
+  }
+}

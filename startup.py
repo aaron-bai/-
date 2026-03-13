@@ -12,7 +12,8 @@ python startup.py \\
     --temperature 0.7 \\
     [--responder-model gpt-4o] \\
     [--responder-temperature 0.7] \\
-    [--output-file review_output.txt]
+    [--format zh|en|path/to/format.json] \
+    [--output-path review_output.txt]
 
 If --responder-model is not provided, the same model is used for all steps.
 """
@@ -100,8 +101,18 @@ def parse_args(argv=None):
     parser.add_argument(
         "--output-dir",
         required=True,
-        default=None,
         help="Directory where the generated review and response Word documents will be saved.",
+    )
+    parser.add_argument(
+        "--format",
+        default="zh",
+        help="DOCX format preset or custom JSON path: zh=中文学术风格, "
+             "en=English academic style, or /path/to/format.json.",
+    )
+    parser.add_argument(
+        "--output-path",
+        default=None,
+        help="Optional path to write the combined plain-text output.",
     )
 
     return parser.parse_args(argv)
@@ -203,6 +214,23 @@ def run(args) -> ReviewPipelineResult:
 
 def main(argv=None):
     args = parse_args(argv)
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    format_map = {
+        "zh": os.path.join(base_dir, "format_zh_academic.json"),
+        "en": os.path.join(base_dir, "format_en_academic.json"),
+    }
+    if args.format in format_map:
+        selected_format_path = format_map[args.format]
+    else:
+        selected_format_path = os.path.abspath(os.path.expanduser(args.format))
+
+    if not os.path.isfile(selected_format_path):
+        print(
+            f"ERROR: format file not found: {selected_format_path}. "
+            "Use zh/en or provide a valid JSON file path via --format.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     try:
         result = run(args)
@@ -220,6 +248,7 @@ def main(argv=None):
             discipline=result.discipline,
             review_questions=result.review_questions,
             review_responses=result.review_responses,
+            format_path=selected_format_path,
         )
     except Exception as exc:
         print(f"ERROR: {exc}", file=sys.stderr)

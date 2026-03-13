@@ -7,40 +7,84 @@ For every question raised by the reviewer, the responder:
   2. Proposes a concrete way to address or resolve the issue in a revised manuscript.
 """
 
+import json
+import re
+
 from llm_client import LLMClient
 
 
 _SYSTEM_PROMPT = (
     "You are an expert academic author responding to peer-review comments for a paper "
     "in the field of {discipline}. "
-    "You have received a numbered list of reviewer questions and concerns. "
-    "For EACH question, you must:\n"
-    "  1. Briefly explain the nature of the problem or what the reviewer's concern is "
-    "pointing to.\n"
-    "  2. Propose a specific, actionable way to address or resolve the issue (e.g., "
-    "additional experiments, clarified methodology, added discussion, corrected figures, "
-    "etc.).\n\n"
-    "Format your response as a numbered list that mirrors the reviewer's list. "
-    "Each item should follow this structure:\n"
-    "  [Question N] Explanation: <explain the problem>\n"
-    "               Resolution: <how to address it>\n\n"
+    "You have received a JSON array of reviewer issues. "
+    "For EACH item, provide a concise summary of the problem and a concrete response.\n\n"
+    "Return ONLY a JSON array. Do not include markdown, prose, or code fences. "
+    "Each array item must be an object with exactly these keys:\n"
+    "  - \"problem\": summary of the reviewer's issue\n"
+    "  - \"responde\": response and concrete resolution plan\n\n"
     "Be professional, constructive, and specific."
     "You should write your responses in {language}."
 )
 
 _USER_TEMPLATE = (
-    "Below are the peer-review questions raised for a paper in the field of {discipline}.\n\n"
-    "--- REVIEW QUESTIONS ---\n"
+    "Below is the reviewer JSON raised for a paper in the field of {discipline}.\n\n"
+    "--- REVIEW JSON ---\n"
     "{review_questions}\n"
-    "--- END OF REVIEW QUESTIONS ---\n\n"
+    "--- END OF REVIEW JSON ---\n\n"
     "For context, here is a summary of the paper:\n\n"
     "--- PAPER TEXT (may be truncated) ---\n"
     "{paper_text}\n"
     "--- END OF PAPER TEXT ---\n\n"
-    "Please provide a response to each review question:"
+    "Return ONLY JSON. No extra text."
 )
 
 _MAX_PAPER_CHARS = 12000
+_REQUIRED_KEYS = ("problem", "responde")
+_CODE_FENCE_PATTERN = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
+
+
+def _extract_json_payload(raw_text: str) -> str:
+    text = raw_text.strip()
+    text = _CODE_FENCE_PATTERN.sub("", text).strip()
+
+    try:
+        json.loads(text)
+        return text
+    except json.JSONDecodeError:
+        pass
+
+    start = text.find("[")
+    end = text.rfind("]")
+    if start != -1 and end != -1 and end > start:
+        candidate = text[start:end + 1].strip()
+        json.loads(candidate)
+        return candidate
+
+    raise json.JSONDecodeError("No JSON array found", text, 0)
+
+
+def _normalize_response_items(raw_text: str) -> str:
+    try:
+        payload = _extract_json_payload(raw_text)
+        data = json.loads(payload)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("LLM did not return valid responder JSON.") from exc
+
+    if not isinstance(data, list):
+        raise RuntimeError("Responder output must be a JSON array.")
+
+    normalized: list[dict[str, str]] = []
+    for index, item in enumerate(data, start=1):
+        if not isinstance(item, dict):
+            raise RuntimeError(f"Responder item #{index} is not a JSON object.")
+
+        normalized_item: dict[str, str] = {}
+        for key in _REQUIRED_KEYS:
+            value = item.get(key, "")
+            normalized_item[key] = str(value).strip()
+        normalized.append(normalized_item)
+
+    return json.dumps(normalized, ensure_ascii=False, indent=2)
 
 
 class ReviewResponder:
@@ -84,7 +128,8 @@ class ReviewResponder:
             paper_text=excerpt,
             language=language
         )
-        return self.llm.chat(
+        raw = self.llm.chat(
             system_prompt=system_prompt,
             user_prompt=user_prompt,
         ).strip()
+        return _normalize_response_items(raw)
