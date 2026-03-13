@@ -26,6 +26,7 @@ _USER_TEMPLATE = (
 # How many characters of the paper to send to the LLM for discipline detection.
 # Sending the full paper is expensive; the abstract + introduction are usually enough.
 _MAX_CHARS = 8000
+_FALLBACK_DISCIPLINE = "Unknown"
 
 
 class DisciplineDetector:
@@ -48,11 +49,47 @@ class DisciplineDetector:
         str
             The detected discipline (e.g., 'Computer Science').
         """
-        excerpt = paper_text[:_MAX_CHARS]
+        cleaned_text = (paper_text or "").strip()
+        if not cleaned_text:
+            return _FALLBACK_DISCIPLINE
+
+        excerpt = cleaned_text[:_MAX_CHARS]
         user_prompt = _USER_TEMPLATE.format(paper_text=excerpt)
         discipline = self.llm.chat(
             system_prompt=_SYSTEM_PROMPT,
             user_prompt=user_prompt,
             max_tokens=64,
         )
-        return discipline.strip()
+
+        normalized = self._normalize_discipline(discipline)
+        if normalized:
+            return normalized
+
+        # Retry once with a shorter excerpt and stricter instruction when providers return blank content.
+        retry_discipline = self.llm.chat(
+            system_prompt=(
+                "Return exactly discipline name of the following paper excerpt.  "
+                "No explanation, no punctuation beyond the name."
+            ),
+            user_prompt=(
+                "Identify the primary academic discipline for this paper excerpt:\n\n"
+                f"{excerpt}\n\n"
+                "Answer with discipline only."
+            ),
+        )
+        normalized_retry = self._normalize_discipline(retry_discipline)
+        return normalized_retry or _FALLBACK_DISCIPLINE
+
+    @staticmethod
+    def _normalize_discipline(value: str) -> str:
+        text = (value or "").strip()
+        if not text:
+            return ""
+
+        first_line = text.splitlines()[0].strip()
+        if ":" in first_line:
+            prefix, suffix = first_line.split(":", 1)
+            if prefix.strip().lower() in {"discipline", "field", "学科", "领域"}:
+                first_line = suffix.strip()
+
+        return first_line.strip(" \t\r\n\"'`。；;,.，")
